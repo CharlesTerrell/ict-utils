@@ -1,0 +1,64 @@
+#!/usr/bin/perl -w
+
+# (C) 2023 Charles Terrell <tachyon@pobox.com>
+# Licensing terms are in LICENSE (Apache 2.0)
+#
+# This script decompresses all zip files given on the command line,
+# each into its own separate automatically-named dir. Requires
+# unzip and a reasonably unix-like shell.
+#
+# Unzip by default seems to extract all files to current working dir,
+# usually making an annoying mess as a result. It allows specifying
+# one destination dir as a command line parameter. This effectively
+# limits unzip to handling one archive file per invocation - not very
+# useful for batch operation.
+#
+# Solution: use Perl to work around unzip's limitations.
+#
+# Command line options, constants, error handling, and debug print
+# are mostly just for practice.
+
+use strict;
+use warnings;
+
+use constant { true => 1, false => 0 };
+use Getopt::Long;
+Getopt::Long::Configure("pass_through");
+my $debug = false;
+GetOptions('debug' => \$debug);
+
+my $filename;
+my $filebase;
+my $fileext;
+
+while ($filename = shift @ARGV) {
+    if ($filename =~ /(.+)\.([^\.\s]+)$/) {
+        dbg_print("$filename matches pattern");
+        $filebase = $1;
+        $fileext = $2;
+    } else {
+        dbg_print("$filename does not match pattern");
+        next;
+    }
+    dbg_print($filename, $filebase, $fileext);
+    if ($fileext =~ /^zip$/io) {
+        my $command;
+        $command = "unzip -o \'$filename\' -d \'$filebase\' 2>&1";
+        dbg_print($command);
+        print(join("\n", qx($command)));
+    } else {
+        dbg_print("$filename is not a zip file");
+    }
+}
+
+sub dbg_print {
+    if (not $debug) {
+        return;
+    }
+    if (scalar(@_) < 1) {
+        print("DEBUG: dbg_print called with no args\n");
+        return;
+    }
+    print("DEBUG: " . join("\t", @_) . "\n");
+}
+
