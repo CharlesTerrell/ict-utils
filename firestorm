@@ -3,7 +3,7 @@
 # (C) 2023 Charles Terrell <tachyon@pobox.com>
 # Licensing terms are in LICENSE (Apache 2.0)
 #
-# firestorm v1.0 2023-05-17
+# firestorm v1.0.1 2023-05-17
 #
 # This script generates a local web page and opens it many times in
 # firefox windows/tabs. The purpose is to test system performance
@@ -22,37 +22,45 @@
 use v5.28;
 use POSIX qw(strftime);
 use File::Basename;
-my $cmd_name = basename($0);
-my $version = "1.0";
+
+# constants (warning: read-only not guaranteed)
+my $CMD_NAME = basename($0);
+my $VERSION = "1.0.1";
+my $DEF_BROWSER = "firefox";
+my $DEF_TABS = 10;
+my $DEF_WORDFILE = "/usr/share/dict/words";
 
 use Getopt::Long;
-my $tabs = 10;
+my $tabs = $DEF_TABS;
 my $help = 0;
 my $no_test = 0;
 my $clean = 0;
-my $browser = "firefox";
+my $browser = $DEF_BROWSER;
 my $new_windows = 0;
+my $wordfile = $DEF_WORDFILE;
 GetOptions("tabs=i" => \$tabs, "help|?" => \$help,
            "no-test" => \$no_test,
            "clean" => \$clean, "browser=s" => \$browser,
-           "new-windows|w" => \$new_windows);
+           "new-windows|w" => \$new_windows,
+           "dictionary|d=s" => \$wordfile);
 if ($help) {
     say " ";
-    say "$cmd_name v$version - opens multiple firefox windows/tabs for stress testing";
+    say "$CMD_NAME v$VERSION - opens multiple firefox windows/tabs for stress testing";
     say " ";
-    say "Usage:  $cmd_name [options]";
+    say "Usage:  $CMD_NAME [options]";
     say "Options:";
     say "    --help | -h | -?    shows this help message and exits";
-    say "    --tabs | -t         how many tabs to open (default: 10)";
+    say "    --tabs | -t         how many tabs to open (default: $DEF_TABS)";
     say "    --no-test | -n      skip browser test (default: do test)";
     say "    --clean | -c        ignore existing images/html";
-    say "    --browser | -b      browser command (default: firefox)";
+    say "    --browser | -b      browser command (default: $DEF_BROWSER)";
+    say "    --dictionary | -d   dictionary file (default: $DEF_WORDFILE)";
     say "    --new-windows | -w  open in new windows, not new tabs";
     say " ";
     exit;
 }
-say "$cmd_name $version";
-say "for more options try:  $cmd_name --help";
+say "$CMD_NAME $VERSION";
+say "for more options try:  $CMD_NAME --help";
 
 # make date header image
 my $header = "header.png";
@@ -81,7 +89,6 @@ if (!$clean && -e $html_out) {
 } else {
     say "HTML...";
     # Where to find a convenient list of words in Feddora 38
-    my $wordfile = "/usr/share/dict/words";
     open my $word_fh, "<", $wordfile
         or die "Could not open file '$wordfile' for reading: $!";
     open my $html_fh, ">", $html_out
