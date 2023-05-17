@@ -1,0 +1,161 @@
+#!/usr/bin/perl -w
+
+# (C) 2023 Charles Terrell <tachyon@pobox.com>
+# Licensing terms are in LICENSE (Apache 2.0)
+#
+# firestorm v1.0 2023-05-17
+#
+# This script generates a local web page and opens it many times in
+# firefox windows/tabs. The purpose is to test system performance
+# under memory pressure, using a reasonably realistic simulation of
+# typical web content.
+#
+# Required: firefox (or another browser), figlet, pango-view, system
+# dictionary file
+#
+# Developed with Fedora 38; other OS not yet tested. You might need
+# to change the system dictionary path and/or the font pango-view
+# uses for images.
+
+# Arbitrarily chose the perl version from Debian "buster" old-stable
+# as feature baseline to reduce boilerplate code.
+use v5.28;
+use POSIX qw(strftime);
+use File::Basename;
+my $cmd_name = basename($0);
+my $version = "1.0";
+
+use Getopt::Long;
+my $tabs = 10;
+my $help = 0;
+my $no_test = 0;
+my $clean = 0;
+my $browser = "firefox";
+my $new_windows = 0;
+GetOptions("tabs=i" => \$tabs, "help|?" => \$help,
+           "no-test" => \$no_test,
+           "clean" => \$clean, "browser=s" => \$browser,
+           "new-windows|w" => \$new_windows);
+if ($help) {
+    say " ";
+    say "$cmd_name v$version - opens multiple firefox windows/tabs for stress testing";
+    say " ";
+    say "Usage:  $cmd_name [options]";
+    say "Options:";
+    say "    --help | -h | -?    shows this help message and exits";
+    say "    --tabs | -t         how many tabs to open (default: 10)";
+    say "    --no-test | -n      skip browser test (default: do test)";
+    say "    --clean | -c        ignore existing images/html";
+    say "    --browser | -b      browser command (default: firefox)";
+    say "    --new-windows | -w  open in new windows, not new tabs";
+    say " ";
+    exit;
+}
+say "$cmd_name $version";
+say "for more options try:  $cmd_name --help";
+
+# make date header image
+my $header = "header.png";
+if (!$clean && -e $header) {
+    say "$header exists; skipping image creation";
+} else {
+    say "Header image...";
+    my $yyyymmdd = strftime "%Y-%m-%d", localtime time;
+    `figlet -k -f banner "$yyyymmdd" > header.txt`;
+    `pango-view --background=transparent --foreground=green --font="DejaVu Sans Mono Bold 12" -qo $header header.txt`;
+}
+
+# make footer image
+my $footer = "footer.png";
+if (!$clean && -e $footer) {
+    say "$footer exists; skipping image creation";
+} else {
+    say "Footer image...";
+    `figlet -k -f script "> fin <" > footer.txt`;
+    `pango-view --background=transparent --foreground=green --font="DejaVu Sans Mono Bold 24" -qo $footer footer.txt`;
+}
+
+my $html_out = "words.html"; 
+if (!$clean && -e $html_out) {
+    say "$html_out exists; skipping HTML creation";
+} else {
+    say "HTML...";
+    # Where to find a convenient list of words in Feddora 38
+    my $wordfile = "/usr/share/dict/words";
+    open my $word_fh, "<", $wordfile
+        or die "Could not open file '$wordfile' for reading: $!";
+    open my $html_fh, ">", $html_out
+        or die "Could not open file '$html_out' for writing: $!";
+    say $html_fh "<html><head></head>";
+    say $html_fh "<body style=\"font-family: mono; font-size: 18\">";
+    say $html_fh "<p><img src=\"$header\"></p>";
+    # add some javascript to make resource usage more realistic
+    say $html_fh <<'END_JS';
+<p id="date_time" style="font-family: mono; font-size: 20"></p>
+<script>
+const date_time_element = document.getElementById("date_time");
+setInterval(function() { date_time_element.innerHTML = Date() }, 1000);
+</script>
+END_JS
+    say $html_fh "<p><pre>";
+    # close output file to flush buffer before adding ascii art
+    close $html_fh;
+
+    # change to pipe for figlet output
+    open my $fig_fh, "| figlet >> $html_out" or die "can't fork: $!";  
+    while (<$word_fh>) {
+        chomp; # remove line endings
+        # skip short words, proper nouns, and punctuation marks
+        # -> limit to 6 letters because there are SO MANY WORDS
+        next unless ( /^[a-z]{6}$/ );
+
+        # example of an offensive words filter if you need it
+        #
+        # next if ( /^potato$/ );
+        # next if ( /^humbug$/ );
+
+        # Data set ~28.5k words, "./firestorm --clean --no-test"
+        # Dev/test hardware: Intel N4500 (chromebook-ish laptop)
+        #
+        # Run figlet once per word in backticks: total run time 1m 10s
+        # Send newline-separated data through one pipe: 0.6s
+        # Lesson: forks can be expensive if you do too many of them.
+        #
+        # Probably also some improvement from sending figlet output
+        # directly to html file in one step rather than bringing it
+        # back into perl first.
+        #
+        # say $html_fh `figlet "$_"`;
+        say $fig_fh "$_";
+    }
+    close $fig_fh;
+    # reopen output file, this time appending
+    open $html_fh, ">>", $html_out
+        or die "Could not open $html_out for writing: $!";
+    say $html_fh "</pre></p>";
+    say $html_fh "<p><img src=\"$footer\"></p></body></html>";
+    close $html_fh;
+    close $word_fh;
+}
+
+# set the web browser launch command
+# made specifically for firefox, but others could work too
+my $actual_browser;
+if ($new_windows && ($browser =~ /firefox/i)) {
+    $actual_browser = $browser . " --new-window";
+} else {
+    $actual_browser = $browser;
+}
+
+if ($no_test) {
+    say "Skipping browser test; $browser not launched";
+} else {
+    say "Launching $browser...";
+    while ($tabs) {
+        say "...$tabs";
+        system("nohup $actual_browser $html_out >> $browser.out 2>&1 &");
+        $tabs--;
+        sleep 3;
+    }
+}
+say "Done!";
