@@ -1,0 +1,30 @@
+#!/bin/sh
+
+echo "-- $0 start"
+
+if command -v apt-get >/dev/null 2>&1; then
+    echo "-- apt-get found"
+    sudo apt-get update
+    sudo apt-get upgrade
+fi
+
+if command -v dnf >/dev/null 2>&1; then
+    echo "-- dnf found"
+    sudo dnf update
+fi
+
+if command -v snap >/dev/null 2>&1; then
+    echo "-- snap found"
+    sudo snap refresh
+fi
+
+if command -v flatpak >/dev/null 2>&1; then
+    echo "-- flatpack found"
+    flatpak update
+fi
+
+echo "-- $0 done"
+
+# the old way
+# konsole --hold -e "flatpak update ; exec /bin/bash" &
+# sudo dnf update
