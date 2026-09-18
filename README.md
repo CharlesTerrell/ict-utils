@@ -2,7 +2,7 @@
 
 This is a collection of short utility programs that I wrote for my own use. Most are in perl, python, and/or bash. I offer them here in case anyone else finds them useful.
 
-**sysupd** - Detects and runs common command-line software update tools. Currently looks for apt-get, dnf, snap, and flatpak. Not mutually exclusive: finding snap does not cause flatpak to skip, for example. Requires sudo for apt-get, dnf, and snap.
+**sysupd** - Detects and runs common command-line software update tools. Currently looks for apt-get, dnf, snap, and flatpak. Not mutually exclusive: finding snap does not skip flatpak, for example. Requires sudo for apt-get, dnf, and snap. Licensed as MIT-0 due to its simplicity.
 
 **unz** - Unzips zip archives listed on the command line. Each extracts to its own folder/dir named after the archive. Skips any files that do not end in ".zip". Example: "unz 2023*_data.zip"
 
