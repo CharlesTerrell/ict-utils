@@ -9,7 +9,9 @@
 # manager exists. Can be symlinked to whatever name you
 # want to simplify tab completion.
 
-echo "-- $0 start"
+CMD_NAME="${0##*/}"
+
+echo "-- $CMD_NAME start"
 
 if command -v apt-get >/dev/null 2>&1; then
     echo "-- apt-get found"
@@ -32,7 +34,7 @@ if command -v flatpak >/dev/null 2>&1; then
     flatpak update
 fi
 
-echo "-- $0 done"
+echo "-- $CMD_NAME done"
 
 # the original way on a former fedora machine
 # konsole --hold -e "flatpak update ; exec /bin/bash" &
