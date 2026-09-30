@@ -1,0 +1,56 @@
+#!/bin/sh
+
+# SPDX-License-Identifier: MIT-0
+# 2026 Charles Terrell
+# 
+# qnaptty
+#
+# Connect to QNAP TS-563 (or similar) over headphone
+# jack style USB serial cable. Assume /dev/ttyUSB0
+# unless specified otherwise.
+#
+# If doing BIOS config, it can change character set
+# to classic PC Code Page 437 with pseudo-graphic
+# characters to make it look prettier.
+
+# uncomment for debugging
+#set -x
+
+# sometimes behaves strangely if screen not cleared
+clear
+
+CHARSET=""
+STAIRSTEP=""
+DEVICE="/dev/ttyUSB0"
+
+while getopts "bsu:h" opt; do
+    case "$opt" in
+        b)
+            echo "BIOS config mode: assume CP437"
+            CHARSET="luit -encoding 'CP437'"
+            ;;
+        s)
+            echo "stairstep fix mode"
+            STAIRSTEP="-m INLCRNL"
+            ;;
+        u)
+            echo "using device $OPTARG"
+            DEVICE="$OPTARG"
+            ;;
+        h|*)
+            echo "Connect to QNAP NAS using serial to USB cable"
+            echo " "
+            echo "Usage: $0 [-b] [-s] [-u DEVICE] [-h]"
+            echo "    -b   BIOS config mode - assume CP437 charset"
+            echo "    -s   stairstep line ending correction mode"
+            echo "    -u   USB device to use (default: /dev/TTYUSB0)"
+            echo "    -h   show usage info"
+            exit 1
+    esac
+done
+
+$CHARSET tio $STAIRSTEP $DEVICE
+
+# The original commands:
+# luit -encoding 'CP437' tio /dev/ttyUSB0 
+# luit -encoding 'CP437' tio -m INLCRNL /dev/ttyUSB0 
